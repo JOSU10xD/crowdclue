@@ -1,0 +1,29 @@
+# system
+.DS_Store
+Thumbs.db
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# node
+node_modules/
+dist/
+
+# secrets and large files
+.env
+.env.local
+backend/models/
+models/
+*.ckpt
+*.pt
+*.pth
+
+# vscode / devcontainer
+.vscode/
+.devcontainer/
+
+# docker
+docker-compose.override.yml

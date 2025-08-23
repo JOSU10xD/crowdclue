@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+python-multipart
+boto3
+aiofiles
+python-dotenv
+sqlalchemy
+asyncpg
+pydantic
+rq
+redis
+opencv-python-headless
+Pillow
+ultralytics

@@ -1,0 +1,8 @@
+opencv-python-headless
+Pillow
+rq
+redis
+boto3
+ultralytics
+torch   # install platform-specific wheel if needed
+facenet-pytorch
