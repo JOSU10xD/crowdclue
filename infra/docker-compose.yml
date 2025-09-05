@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: hack
+      POSTGRES_PASSWORD: hackpwd
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://hack:hackpwd@postgres:5432/mydb
+      ADMIN_SECRET: letmein
+      UPLOAD_DIR: /usr/src/app/uploads
+      PORT: 3000
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../backend/uploads:/usr/src/app/uploads
+
+volumes:
+  pgdata:
