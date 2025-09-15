@@ -1,9 +1,8 @@
-ultralytics==8.3.193
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
-torchaudio==2.2.2+cpu
--f https://download.pytorch.org/whl/torch_stable.html
-opencv-python
-pillow
-psycopg2-binary
-flask
+Flask==2.3.3
+Flask-Cors==4.0.1
+psycopg2-binary==2.9.10
+bcrypt==4.0.1
+Pillow==10.0.0
+numpy==1.26.4
+opencv-python-headless==4.8.1.78
+PyJWT==2.8.0

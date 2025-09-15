@@ -1,29 +1,38 @@
-# system
+# Node
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.venv/
+env/
+venv/
+
+# Docker
+*.log
+docker-data/
+
+# OS
 .DS_Store
 Thumbs.db
 
-# python
-__pycache__/
-*.pyc
-.venv/
-venv/
+# Editor
+.vscode/
+.idea/
 
-# node
-node_modules/
-dist/
+# Coverage / test
+coverage/
+htmlcov/
 
-# secrets and large files
+# Uploads (runtime only)
+uploads/
+
+# Environment
 .env
 .env.local
-backend/models/
-models/
-*.ckpt
-*.pt
-*.pth
-
-# vscode / devcontainer
-.vscode/
-.devcontainer/
-
-# docker
-docker-compose.override.yml
+.env.*
