@@ -11,6 +11,7 @@ permissions:
   id-token: write
 
 env:
+  # image repo prefix (change repo name if you want)
   IMAGE_REPO_PREFIX: ghcr.io/${{ github.repository_owner }}/crowdclue
 
 jobs:
@@ -24,6 +25,7 @@ jobs:
 
       - name: Git SHA
         id: sha
+        # create an 8-char short sha output
         run: echo "::set-output name=sha::${GITHUB_SHA::8}"
 
   build-and-push:
@@ -54,29 +56,44 @@ jobs:
         env:
           IMAGE_TAG: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
         run: |
-          # pass optional admin secret / api base at build time (for demo only)
           docker build \
-            --build-arg VITE_ADMIN_SECRET="${{ secrets.VITE_ADMIN_SECRET }}" \
+            --build-arg VITE_ADMIN_SECRET="${{ secrets.VITE_ADMIN_SECRET || '' }}" \
             --build-arg VITE_API_BASE="${{ secrets.VITE_API_BASE || '' }}" \
             -t "${IMAGE_TAG}" ./frontend
           docker push "${IMAGE_TAG}"
 
   optional-deploy:
     needs: build-and-push
-    if: github.ref == 'refs/heads/dev' && secrets.KUBECONFIG != ''
+    # only trigger this job on dev branch (still runs, but will skip if no KUBECONFIG)
+    if: ${{ github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set KUBECONFIG
+      - name: Ensure KUBECONFIG secret exists (skip if not)
+        id: check_kube
+        run: |
+          if [ -z "${{ secrets.KUBECONFIG }}" ]; then
+            echo "KUBECONFIG secret not set; skipping deploy steps."
+            echo "::set-output name=skip::true"
+            exit 0
+          else
+            echo "KUBECONFIG found; continuing deploy."
+            echo "::set-output name=skip::false"
+          fi
+
+      - name: Set KUBECONFIG and show context
+        if: steps.check_kube.outputs.skip == 'false'
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
         run: |
-          echo "$KUBECONFIG" > kubeconfig && export KUBECONFIG=$(pwd)/kubeconfig
+          echo "$KUBECONFIG" > kubeconfig
+          export KUBECONFIG=$(pwd)/kubeconfig
           kubectl config view
 
       - name: Update deployments with new image tags
+        if: steps.check_kube.outputs.skip == 'false'
         env:
           BACKEND_IMG: ${{ env.IMAGE_REPO_PREFIX }}-backend:${{ needs.prepare.outputs.sha }}
           FRONTEND_IMG: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
