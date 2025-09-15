@@ -24,7 +24,7 @@ jobs:
 
       - name: Git SHA
         id: sha
-        run: echo "::set-output name=sha::${GITHUB_SHA::8}"
+        run: echo "sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
   build-and-push:
     needs: prepare
@@ -45,41 +45,58 @@ jobs:
 
       - name: Build & push backend image
         env:
-          IMAGE_TAG: ${{ env.IMAGE_REPO_PREFIX }}-backend:${{ needs.prepare.outputs.sha }}
+          RAW_TAG: ${{ env.IMAGE_REPO_PREFIX }}-backend:${{ needs.prepare.outputs.sha }}
         run: |
-          docker build -t "${IMAGE_TAG}" ./backend
-          docker push "${IMAGE_TAG}"
+          IMAGE_TAG=$(echo "$RAW_TAG" | tr '[:upper:]' '[:lower:]')
+          echo "Using image tag: $IMAGE_TAG"
+          docker build -t "$IMAGE_TAG" ./backend
+          docker push "$IMAGE_TAG"
 
       - name: Build & push frontend image
         env:
-          IMAGE_TAG: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
+          RAW_TAG: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
         run: |
-          # pass optional admin secret / api base at build time (for demo only)
+          IMAGE_TAG=$(echo "$RAW_TAG" | tr '[:upper:]' '[:lower:]')
+          echo "Using image tag: $IMAGE_TAG"
           docker build \
-            --build-arg VITE_ADMIN_SECRET="${{ secrets.VITE_ADMIN_SECRET }}" \
+            --build-arg VITE_ADMIN_SECRET="${{ secrets.VITE_ADMIN_SECRET || '' }}" \
             --build-arg VITE_API_BASE="${{ secrets.VITE_API_BASE || '' }}" \
-            -t "${IMAGE_TAG}" ./frontend
-          docker push "${IMAGE_TAG}"
+            -t "$IMAGE_TAG" ./frontend
+          docker push "$IMAGE_TAG"
 
   optional-deploy:
     needs: build-and-push
-    if: github.ref == 'refs/heads/dev' && secrets.KUBECONFIG != ''
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set KUBECONFIG
+      - name: Ensure KUBECONFIG secret exists (skip if not)
+        id: check_kube
+        run: |
+          if [ -z "${{ secrets.KUBECONFIG }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set KUBECONFIG and show context
+        if: steps.check_kube.outputs.skip == 'false'
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
         run: |
-          echo "$KUBECONFIG" > kubeconfig && export KUBECONFIG=$(pwd)/kubeconfig
+          echo "$KUBECONFIG" > kubeconfig
+          export KUBECONFIG=$(pwd)/kubeconfig
           kubectl config view
 
       - name: Update deployments with new image tags
+        if: steps.check_kube.outputs.skip == 'false'
         env:
-          BACKEND_IMG: ${{ env.IMAGE_REPO_PREFIX }}-backend:${{ needs.prepare.outputs.sha }}
-          FRONTEND_IMG: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
+          RAW_BACKEND: ${{ env.IMAGE_REPO_PREFIX }}-backend:${{ needs.prepare.outputs.sha }}
+          RAW_FRONTEND: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
         run: |
-          kubectl set image deployment/backend backend=${BACKEND_IMG} --namespace default || true
-          kubectl set image deployment/frontend frontend=${FRONTEND_IMG} --namespace default || true
+          BACKEND_IMG=$(echo "$RAW_BACKEND" | tr '[:upper:]' '[:lower:]')
+          FRONTEND_IMG=$(echo "$RAW_FRONTEND" | tr '[:upper:]' '[:lower:]')
+          kubectl set image deployment/backend backend=$BACKEND_IMG --namespace default || true
+          kubectl set image deployment/frontend frontend=$FRONTEND_IMG --namespace default || true
