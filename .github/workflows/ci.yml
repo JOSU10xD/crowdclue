@@ -51,7 +51,6 @@ jobs:
           echo "Using image tag: $IMAGE_TAG"
           docker build -t "$IMAGE_TAG" ./backend
           docker push "$IMAGE_TAG"
-
       - name: Build & push frontend image
         env:
           RAW_TAG: ${{ env.IMAGE_REPO_PREFIX }}-frontend:${{ needs.prepare.outputs.sha }}
@@ -63,7 +62,6 @@ jobs:
             --build-arg VITE_API_BASE="${{ secrets.VITE_API_BASE || '' }}" \
             -t "$IMAGE_TAG" ./frontend
           docker push "$IMAGE_TAG"
-
   optional-deploy:
     needs: build-and-push
     if: github.ref == 'refs/heads/dev'
@@ -80,7 +78,6 @@ jobs:
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
-
       - name: Set KUBECONFIG and show context
         if: steps.check_kube.outputs.skip == 'false'
         env:
@@ -89,7 +86,6 @@ jobs:
           echo "$KUBECONFIG" > kubeconfig
           export KUBECONFIG=$(pwd)/kubeconfig
           kubectl config view
-
       - name: Update deployments with new image tags
         if: steps.check_kube.outputs.skip == 'false'
         env:
