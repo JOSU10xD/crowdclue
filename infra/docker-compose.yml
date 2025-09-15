@@ -16,7 +16,7 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://hack:hackpwd@postgres:5432/mydb
+      DATABASE_URL: "postgres://hack:hackpwd@postgres:5432/mydb"
       ADMIN_SECRET: letmein
       UPLOAD_DIR: /usr/src/app/uploads
       PORT: 3000
@@ -26,6 +26,25 @@ services:
       - "3000:3000"
     volumes:
       - ../backend/uploads:/usr/src/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"        # browse to http://localhost:8080
+    restart: unless-stopped
+    # optional local dev mount (uncomment to use live dev files)
+    # volumes:
+    #   - ../frontend:/app:ro
 
 volumes:
   pgdata:
